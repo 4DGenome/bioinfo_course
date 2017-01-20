@@ -443,7 +443,7 @@ chr22    2000    6000</code></pre>
 <p><strong>Peaks overlap</strong></p>
 <p>In the script above we used the following line of code to compare the genomic coordinates of the peaks in the 2 filtered peaks lists to find what peaks are shared and what peaks are specific of each list/sample:</p>
 
-<pre><code>bedtools multiinter -i $tfile1 $tfile2 -header &gt; $ofile</code></pre>
+<pre><code>bedtools multiinter -i $tfile1 $tfile2 -header -name sample1 sample2 &gt; $ofile</code></pre>
 <ul>
 <li><code>bedtools</code> invokes the <a href="http://bedtools.readthedocs.io/en/latest/">bedtools</a> toolset for genome arithmetic. bedtools not only is a very powerful tool in the analysis of genomic datasets but it is very well documented</li>
 <li><code>multiinter</code>: bedtools comprises several tools and this is one of them, which finds whether regions in the files passed with <code>-i $tfile1 $tfile2</code> overlap or not</li>

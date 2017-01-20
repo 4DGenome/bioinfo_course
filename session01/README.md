@@ -273,7 +273,7 @@ awk -v min_qval=$min_qval -v min_enrichment=$min_enrichment '($7 > min_enrichmen
 
 In the script above we used the following line of code to compare the genomic coordinates of the peaks in the 2 filtered peaks lists to find what peaks are shared and what peaks are specific of each list/sample:
 ```
-bedtools multiinter -i $tfile1 $tfile2 -header > $ofile
+bedtools multiinter -i $tfile1 $tfile2 -header -name sample1 sample2 > $ofile
 ```
 - `bedtools` invokes the [bedtools](http://bedtools.readthedocs.io/en/latest/) toolset for genome arithmetic. bedtools not only is a very powerful tool in the analysis of genomic datasets but it is very well documented
 - `multiinter`: bedtools comprises several tools and this is one of them, which finds whether regions in the files passed with `-i $tfile1 $tfile2` overlap or not
