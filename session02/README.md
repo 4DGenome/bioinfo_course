@@ -37,7 +37,7 @@ In any case, please create a new directory for this session and change directory
 
 ```bash
 mkdir -p bioinfo_course/session02/
-cp bioinfo_course/session02
+cd bioinfo_course/session02
 mkdir -p analysis/{annotation,closest,overlap}
 ```
 
@@ -85,7 +85,7 @@ ls -lhr data
 * `-h` indicates **h**uman readable file size units
 * `-r` indicates **r**everse order
 
-There are several peak files corresponding to the experiments (`gv*_chipseq_peaks.narrowPeak`), one annotation bed file with information about genes (`gencode.v24.annotation_genes.bed`), the output tab-separated file of the differential expression analysis (`deseq2_untreated_0_progesterone_360.tsv`) and one file with the chromosome sizes (`chromosome.sizes`, in bp).
+There are several peak files corresponding to the experiments (`gv*_chipseq_peaks.bed`), one annotation bed file with information about genes (`gencode.v24.annotation_genes.bed`), the output tab-separated file of the differential expression analysis (`deseq2_untreated_0_progesterone_360.tsv`) and one file with the chromosome sizes (`chromosome.sizes`, in bp).
 
 You can have a look at any of this files using the `head` command, that print the first 10 lines of the file. For example
 
@@ -187,13 +187,13 @@ We want to select those promoters that contain a PRBS.
 In last session we used `bedtools multiinter` to identify common intervals among multiple interval files. Here we will follow a simpler approach using [`bedtools intersect`](http://bedtools.readthedocs.io/en/latest/content/tools/intersect.html). It takes to `bed` files as arguments (`-a` and `-b`) and returns their intersection. The output can be modulated by several arguments. We can use the flag `-u` to output only those features in `-a` that overlap any feature of `-b`.
 
 ```bash
-bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.narrowPeak
+bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.bed
 ```
 
-This command subsets from the `$proms` file only those features overlapping peaks  in `data/gv_009_01_01_chipseq_peaks.narrowPeak`. We further use a pipe to count the number of promoters with PRBS
+This command subsets from the `$proms` file only those features overlapping peaks  in `data/gv_009_01_01_chipseq_peaks.bed`. We further use a pipe to count the number of promoters with PRBS
 
 ```bash
-bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.narrowPeak | wc -l
+bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.bed | wc -l
 ```
 
 * `wc` is a command that performs **w**ord, line and byte **c**ounts of a file
@@ -221,24 +221,24 @@ Now we can build a more complicated `for` loop to get the number of promoters th
 ```bash
 for i in data/gv*
 do
-	basename $i
+	basename $i .bed
 	bedtools intersect -u -a $proms -b $i | wc -l
 done
 ```
 
-* `basename $i` takes one path and strips all directories to get only the naked file name
+* `basename $i` takes one path and strips out all directories to get only the naked file name. It can take a second optional argument (`.bed` in this case) as a suffix, to remove it out also
 
 Instead of just counting the number of promoters, we can store the resulting files
 
 ```bash
 for i in data/gv*
 do
-	outfile=analysis/overlap/$(basename $i).tss_overlap.bed
+	outfile=analysis/overlap/$(basename $i .bed).tss_overlap.bed
 	bedtools intersect -u -a $proms -b $i > $outfile
 done
 ```
 
-* `outfile=analysis/overlap/$(basename $i).tss_overlap.bed` is striping down the file name of `$i` and using it to create a new file name located in the `analysis/overlap/` sub-directory, storing it in the variable `outfile`.
+* `outfile=analysis/overlap/$(basename $i .bed).tss_overlap.bed` is striping down the file name of `$i` (including the `.bed` suffix) and using it to create a new file name located in the `analysis/overlap/` sub-directory, storing it in the variable `outfile`.
 
 We can encounter again the number of promoters bound by PRBS with a different instruction
 
@@ -263,7 +263,7 @@ Having the absolute numbers is nice, but it would be more useful to put this num
 One way to answer this question is to create a fake random set of PRBS with the same characteristics (number and size) and check how many promoters have one of this fake-PRBS. Fortunately, `bedtools` has a tool to perform random shuffling of a given set of features(bed file).
 
 ```bash
-bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.narrowPeak -g $sizes
+bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.bed -g $sizes
 ```
 * `-i`, as usual, identifies the input bed file
 * `-g`, as before, identifies the file with chromosome sizes
@@ -271,21 +271,21 @@ bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.narrowPeak -g $sizes
 We can use the output of this command as the input peak file to the `intersect` command and check how many promoters have a fake-PRBS
 
 ```bash
-bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.narrowPeak -g $sizes | \
+bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.bed -g $sizes | \
 		 bedtools intersect -u -a $proms -b - | \
 		 wc -l
 ```
 and compare it with what we had before
 
 ```bash
-wc -l analysis/overlap/gv_092_01_01_chipseq_peaks.narrowPeak.tss_overlap.bed
+wc -l analysis/overlap/gv_092_01_01_chipseq_peaks.bed.tss_overlap.bed
 ```
 It would be nice if we can automatize this for all peak files. Let's do it with a for loop!
  
 ```bash
 for i in data/gv*
 do
-	name=$(basename $i)
+	name=$(basename $i .bed)
 	tssoverlap=analysis/overlap/$name.tss_overlap.bed
 
 	nreal=$(cat $tssoverlap | wc -l)
@@ -299,7 +299,7 @@ done
 
 Wow! Maybe this code block is too much. Line by line:
 
-* `name=$(basename $i)`: "get the file name (without the sub-directories) and store it in the `name` variable
+* `name=$(basename $i .bed)`: "get the file name (without the sub-directories and the `.bed` suffix) and store it in the `name` variable
 * `tssoverlap=analysis/overlap/$name.tss_overlap.bed`: create a file name from the `name` defined, adding the new sub-directories and the corresponding suffix (so, retrieve the original overlap file) and store it in the `tssoverlap` variable
 * `nreal=$(cat $tssoverlap | wc -l)`: print the contents of `$tssoverlap` file, count the number of lines it has and store it in the variable `nreal`
 * Pay attention to the definition of the `nrandom` variable: It is the very same command used in the previous for loop, but this time, instead of printing the output, we are telling the machine to store it in the `nrandom` variable
@@ -311,7 +311,7 @@ We can redirect the output to a results file (save it!).
 ```bash
 for i in data/gv*
 do
-	name=$(basename $i)
+	name=$(basename $i .bed)
 	tssoverlap=analysis/overlap/$name.tss_overlap.bed
 
 	nreal=$(cat $tssoverlap | wc -l)
@@ -340,11 +340,12 @@ So, are PRBS enriched in promoters???
 Now that you master the for-loop-way, let's use it to assign the closest PRBS to each TSS
 
 ```bash
-for i in data/gv*
+for i in data/gv*bed
 do
-	name=$(basename $i)
-	bedtools closest -d -a $tss -b $i > analysis/closest/$name.closest_tss.bed
+	name=$(basename $i .bed)
+	bedtools closest -d -t first -a $tss -b $i > analysis/closest/$name.closest_tss.bed
 done
 ```
-* `bedtools closests` takes two feature files (`-a` and `-b`) and returns, for each row in file `-a` the closest feature in file `-b`
+* `bedtools closest` takes two feature files (`-a` and `-b`) and returns, for each row in file `-a` the closest feature in file `-b`
 * `-d` modifies the output so an extra column is added with the distance (in bp) to the corresponding closest feature.
+* `t first` also modifies the output; it tells the tool to, whenever there is a tie (two PRBS at the same distance), just take the dirst one
