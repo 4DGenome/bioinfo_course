@@ -51,7 +51,7 @@ mkdir -p analysis/{annotation,closest,overlap}
 The data for this session is already in the cluster file system. You can copy to your working directory
 
 ```bash
-cp -r /users/project/4DGenome/bioinfo_course/session02/* .
+cp -r /users/GR/mb/evidal/courses/bioinfo_course/session02/* .
 ```
 
 * `cp` stands for **c**o**p**y
