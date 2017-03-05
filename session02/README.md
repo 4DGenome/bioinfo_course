@@ -349,3 +349,358 @@ done
 * `bedtools closest` takes two feature files (`-a` and `-b`) and returns, for each row in file `-a` the closest feature in file `-b`
 * `-d` modifies the output so an extra column is added with the distance (in bp) to the corresponding closest feature.
 * `t first` also modifies the output; it tells the tool to, whenever there is a tie (two PRBS at the same distance), just take the dirst one
+
+# A "pinch" of R
+
+We can use R to cross data sets, make some fancy plots and try summarize the information in some useful way. In order to launch the program, just type `R` :)
+
+We will see a welcome message and that the prompt has changed (the prompt is the symbol at the very left of the line where we can type commands).
+
+Once inside on `R` first thing we need to do is load some dependencies
+
+```R
+library("tidyverse")
+options(stringsAsFactors = F)
+```
+Unlike `bash`, in R all functions/commands need to encapsulate the arguments between braces `(` `)`.
+
+* `library("tidyverse")` allow us to load a set of handy functions that will ease data manipulation and ploting. There is a lot of information about them in the [web](http://tidyverse.org/)
+* `options(stringsAsFactors = F)` sets the way R interpret files with letters (characters)
+
+## Import data
+
+The very first thing we need to do is import the data we want to work with. We will start setting the file names. We could do this "manually" coping the path to the file(s) of interest, but lazy guys hate typing long file names / paths, so they invented a some shortcuts to avoid this.
+
+```R
+difexp_file <- list.files("data",
+                     pattern = "deseq2",
+                     full = TRUE)
+```
+* The operator `<-` "assigns" the one value to one object. In this case, we are defining the object `difexp_file` as the output of the expression on the right hand side.
+* `difexp_file` is just an arbitrary name, We could have name it differently, but never using a number as the first character.
+* `list.files` is a function (note the braces) that takes as mandatory argument a path (i.e a directory) for which we want to **list** the **files** in.
+* `pattern = "deseq2"` defines an optional argument that helps `list.files` to identify the files. In this case, we want to locate the files containing the word `"deseq2"`
+* `full = TRUE` forces the function to return the full path of the files found, not just the file names.
+
+So, in summary, the above command tells R to list all files in `"data"` directory that matches the pattern and output them as full paths. With this we store the file location of the results of the RNAseq differential expression analysis.
+
+We can do something similar to locate the file containing the TSS
+
+```R
+tss_file <- list.files("analysis/annotation",
+                       pattern = "tss",
+                       full = TRUE)
+```
+Please note that this time we are looking in a different sub-directory.
+
+Once R already knows which files to import, we have to read them.
+
+```R
+difexp <- read.delim(difexp_file)
+
+tss <- read.delim(tss_file, header = FALSE)
+names(tss) <- c("chr", "start", "end", "id", "score", "strand")
+```
+
+Again, we are creating new objects (`difexp` and `tss`) using the assign operator `<-`.
+
+* `read.delim` is a function that reads a tab delimited file.
+* The argument `header = FALSE` makes R to read a file without header (column names).
+
+In the third line of this code chunk we are setting the attribute `names` of the object `tss`. This is needed, as the original file was headless.
+
+* `c` is a function (note the braces) that concatenates a series of elements into one vector. Here we can see that words in R either have a special meaning (names assigned to object, functions or arguments) or have to be quoted.
+
+## Describe data sets
+
+The objects created with the `read.delim` function are `data.frames`, which is the way R stores data sets. A data frame is a collection of variables (encoded as vectors, in columns) for a series of registers / individuals (in rows).
+
+We can inspect a `data.frame` in several ways:
+
+* Showing the first rows
+
+```R
+head(difexp)
+```
+* Summarizing its columns
+
+```R
+summary(difexp)
+```
+* Getting its structure
+
+```R
+str(difexp)
+
+str(tss)
+```
+In any case, we can check if the imported objects match our expectations.
+
+## Basic interaction with
+
+The `tidyverse` library provide us with some *intuitive* verbs to interact with our data. For instance, we can filter rows of a data frame
+
+```R
+difexp <- filter(difexp, !(is.na(padj)))
+```
+* `filter` function takes one `data.frame` as first argument, and then one (or many) vectors of conditions to filter for
+
+Let's try to understand the condition from the inside to the outside of the braces: 
+
+* `padj` is the name of a variable of the data set; it stores the adjusted p-value of the comparison
+* `is.na` function evaluates each element of a vector (the `padj` variable) and returns a `TRUE` value if the element is `NA` (**N**ot **a**vailable, i.e. missing)
+* the `!` operator switches logical values; it makes `TRUE` `FALSE` and vice versa
+
+In a nutshell: only keep (`filter`) rows that do not present a missing value (`NA`) in the `padj` column
+
+We can subset the columns of interest:
+
+```R
+tss <- select(tss, chr, id)
+```
+* `select` is a function that takes a `data.frame` and as many column names as we want to keep (`chr` and `id` here) and outputs just the selected columns.
+
+We can check the result of these commands
+
+```R
+str(difexp)
+str(tss)
+```
+
+## Merge information
+
+Another interesting task that can be done is to "cross" information of two data sets, given that they have something in common.
+
+In our example, `difexp` contains the differential expression results at gene level and `tss` contains the genomic location of the genes.
+
+```R
+str(difexp)
+str(tss)
+
+difexp <- inner_join(difexp, tss)
+
+str(difexp)
+```
+* `inner_join` is a function that takes two `data.frame`s as arguments and returns another `data.frame` with all the columns of both original data sets and only the rows that they have in common
+
+In order to work, both data sets must have some columns in common (in this case `id` variable, encoding the ENSEMBL gene IDs).
+
+Please take a moment to compare the change in the structure of the object after including the genomic position information.
+
+## Transform variables
+
+Another useful "verb" is `mutate`. It is used to transform and create new variables inside a `data.frame` (first argument).
+
+```R
+difexp <- mutate(difexp,
+                 direction = ifelse(log2FoldChange > 0, "up", "down"),
+                 stat_diff = ifelse(padj < .01, "signf", "no-sig"),
+                 bio_diff = ifelse(abs(log2FoldChange) > 1, "relevant", "irrelevant"),
+                 diff_group = paste(stat_diff, bio_diff),
+                 change = ifelse((stat_diff == "signf") & (bio_diff == "relevant"),
+                                 "change", "no change"))
+
+str(difexp)
+```
+In the above code we are creating four new variables for the data set `difexp`.
+
+* `ifelse` is a function that evaluates its first argument (that should be a `TRUE` / `FALSE`) and returns, for each element of the evaluated vector, the second argument if the statement is `TRUE` and the third one else (if is `FALSE`)
+* `abs` is a function that takes a numeric vector and returns its absolute value
+* `paste` function creates a vector of characters out of two (or more) vectors 
+
+For instance, the new variable `direction` will have the value `"up"` if `log2FoldChange > 0` and `"down"` otherwise. The variable `stat_diff` is `"signif"` if the adjusted p-values is below 0.01 (reflecting a statistical significant difference between conditions). The variable `bio_diff` is `"relevant"` if the relative difference, in absolute value, is above 2 times.  The variable `diff_group` just groups the possible outcomes of the previous `*_diff` variables. Finally, the variable `change` is "change" if and only if the difference is both statistically significant and biologically relevant.
+
+
+## Ploting
+
+We can create a volcano plot using `ggplot` functions
+
+```R
+ggplot(difexp,
+       aes(x = log2FoldChange, y = -log10(padj))) +
+    geom_point(alpha = .3)
+```
+* `ggplot` is a function than initializes a plot, usually taking two arguments: a `data.frame` and a aesthetics call
+* `aes` is a function that allow us to tell to the `ggplot` function which variables we want to plot; in this case, we want to depict the log2 fold change on the X axis and minus the log10 of the adjusted p-value on the Y axis
+* `geom_point` is one of the functions associated with `ggplot` that defines a layer to be represented in the plot; in this case, we want to depict some points
+* `alpha` is a parameter that controls the transparency (0 fully transparent, 1 fully opaque)
+
+`ggplot` is quite a powerful tool to make figures. For instance, we can color the plots according to the groups defined earlier just adding one extra argument to the `aes` call:
+
+```R
+ggplot(difexp,
+       aes(x = log2FoldChange, y = -log10(padj),
+           col = diff_group)) +
+    geom_point(alpha = .3) +
+    ylim(c(0, 50))
+```
+* `ylim` tells ggplot to restrict Y axis into the limits defined by the vector `c(0, 50)`
+
+## Summarize
+
+Having thousand of rows can be overwhelming. Why not try to summarize the information a little bit?
+
+```R
+summarize(difexp,
+          n_up = sum(direction == "up"),
+          n_tot = n(),
+          p_up = n_up / n_tot,
+          se_p_up = sqrt(p_up * (1 - p_up) / n()),
+          ll = p_up - 2 * se_p_up,
+          ul = p_up + 2 * se_p_up)
+```
+
+* `summarize` takes a data.frame and performs as many summaries of if as we can imagine.
+* `n_up` is the sum of all rows where the column `direction` takes the value `"up"` (number of genes increasing their expression)
+
+Can you guess what are the other columns?
+
+We can combine several verbs in one expression to answer more complex questions. For instance, what is the proportion of genes increasing their expression value in chromosome chr13?
+
+We could create a new object filtering the rows where `chr` takes the value `"chr13"` and then replicate the above summarizing command. Or we can take advantage of the pipe operator `%>%` that redirects the output of one function to the input of the next one. It is the `R` flavor of the UNIX `|` pipe.
+
+```R
+filter(difexp, chr == "chr13") %>%
+    summarize(n_up = sum(direction == "up"),
+              n_tot = n(),
+              p_up = n_up / n_tot,
+              se_p_up = sqrt(p_up * (1 - p_up) / n()),
+              ll = p_up - 2 * se_p_up,
+              ul = p_up + 2 * se_p_up)
+```
+
+## Grouping
+
+Sometimes we want the results stratified. If we would like to know the proportion of genes going up for each chromosome, we could repeat last code batch changing the value of the chromosome, but it is more efficient (and more lazy) to do it all together.
+
+```R 
+group_by(difexp, chr) %>%
+    summarize(n_up = sum(direction == "up"),
+              n_tot = n(),
+              p_up = n_up / n_tot,
+              se_p_up = sqrt(p_up * (1 - p_up) / n()),
+              ll = p_up - 2 * se_p_up,
+              ul = p_up + 2 * se_p_up)
+```
+
+* `group_by` takes one `data.frame` and as many variables in it we want to stratify by
+* `summarize` acting on a "grouped" `data.frame` returns the summaries per group
+
+Maybe having the proportion of genes going up per chromosome is not very interesting. What about separate them whether the change is significant and relevant or not?
+
+```R
+group_by(difexp, change) %>%
+    summarize(n_up = sum(direction == "up"),
+              n_tot = n(),
+              p_up = n_up / n_tot,
+              se_p_up = sqrt(p_up * (1 - p_up) / n()),
+              ll = p_up - 2 * se_p_up,
+              ul = p_up + 2 * se_p_up)
+```
+
+So it seems the proportion of "real" changes in expression is smaller for up-regulated genes.
+
+## Integrating more data
+
+It could be interesting to add some information about PRBS.
+
+We can select one of the TSS files annotated with the closest PRBS obtained before and import it into out session
+
+```R
+closest_files <- list.files("analysis/closest",
+                        pattern = ".closest_tss.bed",
+                        full = TRUE)
+closest_files
+closest_file <- closest_files[6]
+
+```
+
+This time there is more than one file matching the pattern. We can select an element out of a vector using the extractor operator (`[`) and the index of the element we want to extract.
+
+* The `[6]` after the `closest_files` object indicates we just want the 6th element of the vector 
+
+Once the file has been selected, we can proceed as before:
+
+```R
+closest <- read.delim(closest_file, header = F)
+names(closest) <- c("chr_tss", "start_tss", "end_tss", "id",
+                    "score_tss", "strand_tss",
+                    "chr_peak", "start_peak", "end_peak", "dis")
+```
+
+And then create a new data set with both the differential expression analysis results and the proximity of PRBS to the TSS.
+
+```R
+dat <- inner_join(difexp, closest)
+
+str(dat)
+```
+
+Let's explore the distribution of distances
+
+```R
+ggplot(dat,
+       aes(x = dis / 1e3)) +
+    geom_histogram(bins = 100) +
+    xlim(c(0, 500)) -
+	xlab("TSS distance to closest PRBS / Kbp")
+```
+
+* `geom_histogram` is another `ggplot` related functions; it creates an histogram with the variable assigned to the x axis in the `aes` call, with as many bins as defined in the `bins` argument
+* `xlab` allow us to change the X axis label
+
+## Relevant question?
+
+
+> **Are those genes having a PRBS near their TSS more prone to suffer expression changes upon hormone treatment?** 
+
+First, lets mark those genes with a peak overlapping the promoter and then we summarize
+
+```R
+mutate(dat,
+       overlap = ifelse(dis < 5e3, "peak", "no peak")) %>%
+    group_by(direction, overlap) %>%
+    summarize(n_ch = sum(change == "change"),
+              n_tot = n(),
+              p_ch = n_ch / n_tot,
+              se_p_ch = sqrt(p_ch * (1 - p_ch) / n()),
+              ll = p_ch - 2 * se_p_ch,
+              ul = p_ch + 2 * se_p_ch) %>%
+    na.omit
+```
+
+What do you think?
+
+### Bonus track (at your own risk)
+
+We can go one step further and use some statistics to check if the probability of a gene to be regulated upon hormone treatment is associated with the presence of PRBS in the promoter and if this association cannot be explained by chance.
+
+We will need to define an auxiliary matrix to get the 95 % CI out of the model
+
+```R
+alpha <- .05
+wald_mat <- matrix(c(1, 0, 1, qnorm(alpha / 2), 1, qnorm(1 - alpha / 2)), 2)
+colnames(wald_mat) <- c("est", "ll", "ul")
+```
+And then fit a logistic regression to model the probability for a gene to experiment a change (both significant and relevant) in terms of the direction of the change, the presence of PRBS in the promoter and their interaction
+
+```R
+mutate(dat,
+       overlap = ifelse(dis < 5e3, 1, 0),
+       down = ifelse(direction == "down", 1, 0)) %>%
+    glm(change == "change" ~ down * overlap, binomial, .) %>%
+    summary %$%
+    coefficients %>%
+    (function(x) x[,1:2] %*% wald_mat) %>%
+    exp
+```
+
+Conclusions:
+
+1. Overall, a gene has 80 % more chances to be down-regulated than up-regulated
+2. A gene has 60 % more chances to be regulated if it has PRBS in its promoter
+3. There is a non-additive effect of the direction and the presence of PRBS; a gene having a PRBS in its promoter has a probability 30 % higher to be down-regulated than what is expected considering both effects independently
+ 
+# All together now
+
+In case we want to replicate this steps without going through this whole document, the main commands for the `bash` part are gathered at [this script](scripts/lines.sh) and the `R` ones [here](scripts/lines.r).

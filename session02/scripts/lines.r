@@ -3,7 +3,6 @@
 # dependencies
 
 library("tidyverse")
-#library("VennDiagram")
 
 # settings
 
@@ -15,17 +14,16 @@ difexp_file <- list.files("data",
                      pattern = "deseq2",
                      full = TRUE)
 
+tss_file <- list.files("analysis/annotation",
+                       pattern = "tss",
+                       full = TRUE)
+
 # read data
 
 difexp <- read.delim(difexp_file)
 
 tss <- read.delim(tss_file, header = F)
-
-names(tss) <- c("chr", "tss", "tss2", "id", "score", "strand")
-
-# subset columns
-
-tss <- select(tss, chr, id)
+names(tss) <- c("chr", "start", "end", "id", "score", "strand")
 
 # describe dataset
 
@@ -35,17 +33,19 @@ str(difexp)
 
 head(difexp)
 
-head(tss)
-
-# merge datasets
-
-difexp <- inner_join(difexp, tss)
-
-str(difexp)
+str(tss)
 
 # filter rows
 
 difexp <- filter(difexp, !is.na(padj))
+
+# select columns
+
+tss <- select(tss, chr, id)
+
+# merge info
+
+difexp <- inner_join(difexp, tss)
 
 # fist plot (volcano plot)
 
@@ -120,28 +120,32 @@ closest_files <- list.files("analysis/closest",
 
 closest_list <- lapply(closest_files, read.delim, header = F)
 
-lapply(closest_list, "[[", "V17") %>% sapply(mean, na.rm = T) %>% rank
+lapply(closest_list, "[[", "V10") %>% sapply(mean, na.rm = T) %>% rank
 
-closest <- closest_list[[5]]
+closest <- closest_list[[6]]
 
 names(closest) <- c("chr_tss", "start_tss", "end_tss", "id",
                     "score_tss", "strand_tss",
-                    "chr_peak", "start_peak", "end_peak",
-                    "id_peak", "score_peak", "strand_peak",
-                    "signal_peak", "pval_peak", "qval_peak",
-                    "summit_peak", "dis")
+                    "chr_peak", "start_peak", "end_peak", "dis")
+
+
+# create new variable
 
 closest <- select(closest, id, dis) %>%
-    mutate(disMbp = dis / 1e6)
+    mutate(disKbp = dis / 1e3)
+
+# merge information
 
 dat <- inner_join(difexp, closest)
 
 # explore distances
 
 ggplot(dat,
-       aes(x = dis)) +
+       aes(x = disKbp)) +
     geom_histogram(bins = 100) +
-    xlim(c(0, .5e6))
+    xlim(c(0, 500))
+
+# mark those genes with a peak in the promoter and summarize
 
 mutate(dat,
        overlap = ifelse(dis < 5e3, "peak", "no peak")) %>%
@@ -154,29 +158,17 @@ mutate(dat,
               ul = p_ch + 2 * se_p_ch) %>%
     na.omit
 
-ps <- mutate(dat,
-       overlap = ifelse(dis < 5e3, "peak", "no peak")) %>%
-    group_by(direction, overlap) %>%
-    summarize(n_ch = sum(change == "change"),
-              n_tot = n(),
-              p_ch = n_ch / n_tot,
-              se_p_ch = sqrt(p_ch * (1 - p_ch) / n()),
-              ll = p_ch - 2 * se_p_ch,
-              ul = p_ch + 2 * se_p_ch) %>%
-    na.omit %>%
-    with(setNames(p_ch, paste(direction, overlap)))
-
-ps / min(ps)
-
-mutate(rel_ch = p_ch / p_ch[(direction == "up") & (overlap == "no peak")])
-
+# auxiliary matrix to get Wald CI 95 % from a lm/glm output
 
 alpha <- .05
 wald_mat <- matrix(c(1, 0, 1, qnorm(alpha / 2), 1, qnorm(1 - alpha / 2)), 2)
 colnames(wald_mat) <- c("est", "ll", "ul")
 
+# fit a logistic model to check if the probability of a gene to be regulated
+# upon hormone treatment is associated with the presence of PRBS in the promoter
+
 mutate(dat,
-       overlap = ifelse(dis < 10e3, 1, 0),
+       overlap = ifelse(dis < 5e3, 1, 0),
        down = ifelse(direction == "down", 1, 0)) %>%
     glm(change == "change" ~ down * overlap, binomial, .) %>%
     summary %$%

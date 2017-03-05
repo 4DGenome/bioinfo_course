@@ -1,13 +1,31 @@
 #!/bin/bash
 
-# settings
+##  This script corresponds to the commands in the ../README.md file.
+##  It will execute the main routines executed from the cluster
+
+# Create directories and move to working directory
+
+mkdir -p bioinfo_course/session02/
+cd bioinfo_course/session02
+mkdir -p analysis/{annotation,closest,overlap}
+
+# Copy the data nedded in the session
+
+cp -r /users/GR/mb/evidal/courses/bioinfo_course/session02/* .
+
+# Load bash configuration
 
 source /users/GR/mb/jquilez/.bashrc
-cd bioinfo_course/session02/
 
-##  prepare annotation
+# List data
 
-# set some variables pointing to files
+ls -lhr data
+
+# Show some lines of the gene annotation file
+
+head data/gencode.v24.annotation_genes.bed
+
+# Set file paths as variables
 
 genes=data/gencode.v24.annotation_genes.bed
 sizes=data/chromosome.sizes
@@ -15,7 +33,7 @@ sizes=data/chromosome.sizes
 tss=analysis/annotation/gencode.v24.annotation_genes.tss.bed
 proms=analysis/annotation/gencode.v24.annotation_genes.promoters.bed
 
-# get TSS
+# Get TSS
 
 awk -v OFS="\t" \
 	'{if($6 == "+"){tss = $2}else{tss = $3}print $1, tss, tss, $4, $5, $6}' \
@@ -23,7 +41,13 @@ awk -v OFS="\t" \
 	bedtools sort -i - > \
 	$tss
 
-# get promoters (+ - 5 Kbp of TSS)
+# Compare TSS with original gene annotation
+
+head $tss
+
+head $genes | cut -f 1-6
+
+# Get promoters
 
 bedtools slop \
 		 -i $tss \
@@ -31,43 +55,68 @@ bedtools slop \
 		 -b 5000 > \
 		 $proms
 
-##  overlap PRBS with promoters
+# Identify promoters with PRBS
 
-cat data/chip_PR_T0.txt data/chip_PR_R30.txt | \
-	while read line
-	do
+bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.bed
+bedtools intersect -u -a $proms -b data/gv_009_01_01_chipseq_peaks.bed | wc -l
 
-		bedtools intersect -u -a $proms -b data/$line > analysis/overlap/$line.tss_overlap.bed
+for i in data/gv*
+do
+	echo $i
+done
+for i in data/gv*
+do
+	basename $i .bed
+	bedtools intersect -u -a $proms -b $i | wc -l
+done
+for i in data/gv*
+do
+	outfile=analysis/overlap/$(basename $i .bed).tss_overlap.bed
+	bedtools intersect -u -a $proms -b $i > $outfile
+done
 
-	done
+# Number of promoters with peaks
 
 wc -l analysis/overlap/*.tss_overlap.bed
 
-# compare with random
+# Shuffle one peak file
 
-cat data/chip_PR_T0.txt data/chip_PR_R30.txt | \
-	while read line
-	do
+bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.bed -g $sizes
 
-		nreal=$(cat analysis/overlap/$line.tss_overlap.bed | wc -l)
-		nrandom=$(bedtools shuffle -i data/$line -g $sizes | \
-						 bedtools intersect -u -a $proms -b - | wc -l)
-		echo $line $nreal $nrandom
+# Shuffle and then overlap with promoters
 
-	done > analysis/overlap/promoters_with_PRBD_and_random.txt
+bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.bed -g $sizes | \
+		 bedtools intersect -u -a $proms -b - | \
+		 wc -l
 
-# get enrichment
+# Compare with real overlap
+
+wc -l analysis/overlap/gv_092_01_01_chipseq_peaks.tss_overlap.bed
+
+# Do it for all files
+
+for i in data/gv*
+do
+	name=$(basename $i .bed)
+	tssoverlap=analysis/overlap/$name.tss_overlap.bed
+
+	nreal=$(cat $tssoverlap | wc -l)
+	nrandom=$(bedtools shuffle -i $i -g $sizes | \
+	    bedtools intersect -u -a $proms -b - | wc -l)
+					
+	echo $name $nreal $nrandom
+
+done > analysis/overlap/promoters_with_PRBD_and_random.txt
+
+# Compute enrichment over expected in random
 
 awk '{print $0, $2 / $3}' \
-	analysis/overlap/promoters_with_PRBD_and_random.txt > \
-	analysis/overlap/enrichment_over_random.txt
+	analysis/overlap/promoters_with_PRBD_and_random.txt
 
-##  closest promoter to PRBS
+# Get closest PRBS to TSS
 
-cat data/chip_PR_T0.txt data/chip_PR_R30.txt | \
-	while read line
-	do
-
-		bedtools closest -d -a $tss  -b data/$line > analysis/closest/$line.closest_tss.bed
-
-	done
+for i in data/gv*bed
+do
+	name=$(basename $i .bed)
+	bedtools closest -d -t first -a $tss -b $i > analysis/closest/$name.closest_tss.bed
+done
