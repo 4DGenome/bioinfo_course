@@ -36,13 +36,15 @@ However, depending of the status of the queue, the system may not provide us wit
 In any case, please create a new directory for this session and change directory to it.
 
 ```bash
-mkdir -p bioinfo_course/session02
+mkdir -p bioinfo_course/session02/
 cp bioinfo_course/session02
+mkdir -p analysis/{annotation,closest,overlap}
 ```
 
 * `mkdir` means **m**a**k**e **dir**ectory
 * `cd` **c**hange **d**irectory.
 * The extra argument `-p` allows the system to create the **p**arent directories and do not complain if they already exist.
+* `analysis/{annotation,closest,overlap}` is a compact notation that allows appending different elements (the ones inside braces) to a common prefix (`analysis/` in this case)
 
 ## Get the files
 
@@ -115,7 +117,7 @@ proms=analysis/annotation/gencode.v24.annotation_genes.promoters.bed
 
 ## Get TSS
 
-Obtaining the TSS is as simple as walking through the annotation file and storing the start position if the gene lies on the positive strand or the end position if it lies on the negative. This can be done in several ways, but one simple and fast one is using [`awk`](https://en.wikipedia.org/wiki/AWK) programming language.
+Obtaining the TSS is as simple as walking through the annotation file and storing the start position if the gene lies on the positive strand or the end position if it lies on the negative. This can be done in several ways, but a simple and fast one is using [`awk`](https://en.wikipedia.org/wiki/AWK) programming language.
 
 ```bash
 awk -v OFS="\t" \
