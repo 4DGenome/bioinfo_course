@@ -278,7 +278,7 @@ bedtools shuffle -i data/gv_092_01_01_chipseq_peaks.bed -g $sizes | \
 and compare it with what we had before
 
 ```bash
-wc -l analysis/overlap/gv_092_01_01_chipseq_peaks.bed.tss_overlap.bed
+wc -l analysis/overlap/gv_092_01_01_chipseq_peaks.tss_overlap.bed
 ```
 It would be nice if we can automatize this for all peak files. Let's do it with a for loop!
  
