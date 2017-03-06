@@ -642,7 +642,7 @@ Let's explore the distribution of distances
 ggplot(dat,
        aes(x = dis / 1e3)) +
     geom_histogram(bins = 100) +
-    xlim(c(0, 500)) -
+    xlim(c(0, 500)) +
 	xlab("TSS distance to closest PRBS / Kbp")
 ```
 
