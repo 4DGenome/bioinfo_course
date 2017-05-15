@@ -56,6 +56,8 @@ ggplot(difexp,
 # create / transform columns
 
 difexp <- mutate(difexp,
+                 log2FoldChange = - log2FoldChange,
+                 stat = - stat,
                  direction = ifelse(log2FoldChange > 0, "up", "down"),
                  stat_diff = ifelse(padj < .01, "signf", "no-sig"),
                  bio_diff = ifelse(abs(log2FoldChange) > 1, "relevant", "irrelevant"),
@@ -169,8 +171,8 @@ colnames(wald_mat) <- c("est", "ll", "ul")
 
 mutate(dat,
        overlap = ifelse(dis < 5e3, 1, 0),
-       down = ifelse(direction == "down", 1, 0)) %>%
-    glm(change == "change" ~ down * overlap, binomial, .) %>%
+       up = ifelse(direction == "up", 1, 0)) %>%
+    glm(change == "change" ~ up * overlap, binomial, .) %>%
     summary %$%
     coefficients %>%
     (function(x) x[,1:2] %*% wald_mat) %>%
