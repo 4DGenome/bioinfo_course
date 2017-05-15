@@ -493,6 +493,8 @@ Another useful "verb" is `mutate`. It is used to transform and create new variab
 
 ```R
 difexp <- mutate(difexp,
+                 log2FoldChange = - log2FoldChange,
+                 stat = - stat,
                  direction = ifelse(log2FoldChange > 0, "up", "down"),
                  stat_diff = ifelse(padj < .01, "signf", "no-sig"),
                  bio_diff = ifelse(abs(log2FoldChange) > 1, "relevant", "irrelevant"),
@@ -508,7 +510,7 @@ In the above code we are creating four new variables for the data set `difexp`.
 * `abs` is a function that takes a numeric vector and returns its absolute value
 * `paste` function creates a vector of characters out of two (or more) vectors 
 
-For instance, the new variable `direction` will have the value `"up"` if `log2FoldChange > 0` and `"down"` otherwise. The variable `stat_diff` is `"signif"` if the adjusted p-values is below 0.01 (reflecting a statistical significant difference between conditions). The variable `bio_diff` is `"relevant"` if the relative difference, in absolute value, is above 2 times.  The variable `diff_group` just groups the possible outcomes of the previous `*_diff` variables. Finally, the variable `change` is "change" if and only if the difference is both statistically significant and biologically relevant.
+For instance, the new variable `direction` will have the value `"up"` if `log2FoldChange > 0` and `"down"` otherwise. The variable `stat_diff` is `"signif"` if the adjusted p-values is below 0.01 (reflecting a statistical significant difference between conditions). The variable `bio_diff` is `"relevant"` if the relative difference, in absolute value, is above 2 times.  The variable `diff_group` just groups the possible outcomes of the previous `*_diff` variables. Finally, the variable `change` is "change" if and only if the difference is both statistically significant and biologically relevant. NOTE: It turns out that the fold change was computed as T0 / R60, so we have to reverse sings of `log2FoldChange` and `stat` (thanks François!).
 
 
 ## Ploting
@@ -687,8 +689,8 @@ And then fit a logistic regression to model the probability for a gene to experi
 ```R
 mutate(dat,
        overlap = ifelse(dis < 5e3, 1, 0),
-       down = ifelse(direction == "down", 1, 0)) %>%
-    glm(change == "change" ~ down * overlap, binomial, .) %>%
+       up = ifelse(direction == "up", 1, 0)) %>%
+    glm(change == "change" ~ up * overlap, binomial, .) %>%
     summary %$%
     coefficients %>%
     (function(x) x[,1:2] %*% wald_mat) %>%
@@ -697,9 +699,9 @@ mutate(dat,
 
 Conclusions:
 
-1. Overall, a gene has 80 % more chances to be down-regulated than up-regulated
+1. Overall, a gene has 80 % more chances to be up-regulated than down-regulated
 2. A gene has 60 % more chances to be regulated if it has PRBS in its promoter
-3. There is a non-additive effect of the direction and the presence of PRBS; a gene having a PRBS in its promoter has a probability 30 % higher to be down-regulated than what is expected considering both effects independently
+3. There is a non-additive effect of the direction and the presence of PRBS; a gene having a PRBS in its promoter has a probability 30 % higher to be up-regulated than what is expected considering both effects independently
  
 # All together now
 
