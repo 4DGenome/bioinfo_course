@@ -573,7 +573,7 @@ filter(difexp, chr == "chr13") %>%
 
 ## Grouping
 
-Sometimes we want the results stratified. If we would like to know the proportion of genes going up for each chromosome, we could repeat last code batch changing the value of the chromosome, but it is more efficient (and more lazy) to do it all together.
+Sometimes we want the results stratified. If we would like to know the proportion of genes going up for each chromosome, we could repeat last code batch changing the value of the chromosome, but it is more efficient (and more lazier) to do it all together.
 
 ```R 
 group_by(difexp, chr) %>%
@@ -600,7 +600,7 @@ group_by(difexp, change) %>%
               ul = p_up + 2 * se_p_up)
 ```
 
-So it seems the proportion of "real" changes in expression is smaller for up-regulated genes.
+So it seems the proportion of "real" changes in expression is bigger for up-regulated genes.
 
 ## Integrating more data
 
