@@ -26,6 +26,8 @@ You will be asked for your USER (see above) and your password. By accessing to t
 getwd()
 ```
 
+<br>
+
 # Load data
 
 # Exploratory analysis
