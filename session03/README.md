@@ -95,8 +95,10 @@ The code:
 # output file
 opdf=/users/project/4DGenome/bioinfo_course/session03/figures/average_profiles_binsize10.pdf
 /software/mb/el7.2/anaconda2/bin/plotHeatmap -m $omat -out $opdf --plotFileFormat pdf --heatmapHeight 10 --heatmapWidth 8 --xAxisLabel='' --startLabel='' --endLabel='' --colorMap=Blues --perGroup --refPointLabel='Peak' --regionsLabel T60-peaks --legendLocation=best --samplesLabel Untreated T60
+```
 
-# remove intermediate files
+We remove the intermediate files:
+```bash
 rm -f  /users/project/4DGenome/bioinfo_course/session03/tmp_gv_066_01_01_chipseq.bed
 ```
 
