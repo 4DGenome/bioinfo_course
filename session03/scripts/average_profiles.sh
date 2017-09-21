@@ -15,24 +15,24 @@
 #==================================================================================================
 
 # variables
-profiles="gv_009_02_01_chipseq gv_066_01_01_chipseq"
-profiles_names="Untreated T60"
-peaks="gv_066_01_01_chipseq"
-peaks_names="T60-peaks"
-process=average_profiles
-peak_caller=macs2
-data_type=chipseq
-version=hg38_mmtv
-sequencing_type=single_end
-peak_calling_mode=with_control
-bin_size=10
-n_regions=1000
-flanking_region=1000
+profiles="gv_009_02_01_chipseq gv_066_01_01_chipseq"	# samples for which profiles will be used
+profiles_names="Untreated T60"							# names that will be shown in the plot for the profiles
+peaks="gv_066_01_01_chipseq"							# samples for which peak regions will be used
+peaks_names="T60-peaks"									# names that will be shonw in the plot for the regions
+process=average_profiles								# name of this analysis (whatever)
+peak_caller=macs2										# variable to tune the selected profile/peak (ignore)
+data_type=chipseq 										# variable to tune the selected profile/peak (ignore)
+version=hg38_mmtv										# variable to tune the selected profile/peak (ignore)
+sequencing_type=single_end								# variable to tune the selected profile/peak (ignore)
+peak_calling_mode=with_control							# variable to tune the selected profile/peak (ignore)
+bin_size=10												# bin size in bp for computeMatrix
+n_regions=1000											# number of random regions selected	
+flanking_region=1000									# number of bp up and downstream of the peak region
+email=javier.quilez@crg.eu								# email to notify begin, end and abortion of job in the cluster
 
-# Paths
+# Paths (input, output and tools paths are defined)
 SAMPLES=/users/GR/mb/jquilez/data/chipseq/samples
-PWD=`pwd`
-ANALYSIS=$PWD
+ANALYSIS=$HOME/bioinfo_course/session03
 JOB_CMD=$ANALYSIS/job_cmd 
 JOB_OUT=$ANALYSIS/job_out
 mkdir -p $JOB_CMD
@@ -43,7 +43,7 @@ compute_matrix=`which computeMatrix`
 plot_heatmap=`which plotHeatmap`
 
 # Cluster parameters
-queue=short-sl65
+queue=short-sl7
 memory=10G
 max_time=06:00:00
 slots=10
@@ -61,6 +61,8 @@ for s in $peaks; do
 	ibed=$SAMPLES/$s/peaks/$peak_caller/$version/$peak_calling_mode/$sequencing_type/${s}_peaks.narrowPeak
 	shuf -n $n_regions $ibed > $tbed 
 	ibeds="$ibeds $tbed"
+	# comment the line above and uncomment the one below to perform the analysis on the entire dataset of peaks
+	#ibeds="$ibeds $ibed"
 done
 
 # prepare read per million profiles
@@ -82,13 +84,11 @@ echo "#!/bin/bash
 #$ -o $m_out/${job_name}_\$JOB_ID.out
 #$ -e $m_out/${job_name}_\$JOB_ID.err
 #$ -j y
-#$ -M javier.quilez@crg.eu
+#$ -M $email
 #$ -m abe
 #$ -pe smp $slots" > $job_file
 
 # deeptools commands: compute matrix
-# -S = bigWig containing the scores (reads per million here) to plot
-# -R = BED file containing the regions to plot
 omat=$ANALYSIS/data/$job_name.mat
 job_cmd="$compute_matrix reference-point \
 			-S $ibws \
@@ -102,7 +102,6 @@ job_cmd="$compute_matrix reference-point \
 echo $job_cmd >> $job_file
 
 # deeptools commands: plot profile
-# -m = matrix from the computeMatrix tool
 opdf=$ANALYSIS/figures/${job_name}.pdf
 job_cmd="$plot_heatmap \
 			-m $omat \
@@ -114,16 +113,18 @@ job_cmd="$plot_heatmap \
 			--startLabel='' \
 			--endLabel='' \
 			--colorMap=Blues \
+			--perGroup \
 			--refPointLabel='Peak' \
 			--regionsLabel $peaks_names \
 			--legendLocation=best \
 			--samplesLabel $profiles_names"
 echo $job_cmd >> $job_file
 
+# remove intermediate files
 echo "rm -f $ibeds" >> $job_file
 
 # Submit job
 chmod a+x $job_file
-#qsub < $job_file
-$job_file
+qsub < $job_file
+#cat $job_file
 

@@ -58,7 +58,7 @@ For this analysis we need at least two files:
 1. read counts profiles (preferably normalized by the number of reads so that different profiles from different samples are comparable)
 2. set of regions of interest
 
-For (1) we will use the read per million profiles for untreated and treated (60 minutes after R5020; aka. T60) PR ChIP-seq samples:
+For (1) we will use the read per million profiles for untreated and treated (60 minutes after R5020; aka. T60) PR ChIP-seq samples in T47D cells:
 ```
 # untreated
 ibw1=/users/GR/mb/jquilez/data/chipseq/samples/gv_009_02_01_chipseq/profiles/hg38_mmtv/single_end/gv_009_02_01_chipseq.rpm.bw
@@ -68,10 +68,24 @@ ibw2=/users/GR/mb/jquilez/data/chipseq/samples/gv_066_01_01_chipseq/profiles/hg3
 
 For (2) we will use the binding regions identified in the T60 samples:
 ```
-ibed=/users/project/4DGenome/bioinfo_course/session03/tmp_gv_066_01_01_chipseq.bed
+ibed=/users/GR/mb/jquilez/data/chipseq/samples/gv_066_01_01_chipseq/peaks/macs2/hg38_mmtv/with_control/single_end/gv_066_01_01_chipseq_peaks.narrowPeak
 ```
 
-To generate the plots we will use [deepTools](http://deeptools.readthedocs.io/en/latest/content/tools/computeMatrix.html), a suite of tools for exploring high-throughput sequencing data.
+This file contains ~80,000 peaks:
+```
+wc -l $ibed
+```
+The computation time of the analysis notably scales up with the number of regions. Therefore, for the sake of speed, here we will reduce the analysis to a subset of 1,000 random peak regions. The random subset of peaks can be generated with:
+```bash
+# make directory in your home directory to store the output of the analysis
+ANALYSIS=$HOME/bioinfo_course/session03
+mkdir -p $ANALYSIS/{data,figures}
+tbed=$ANALYSIS/data/tmp_gv_066_01_01_chipseq.bed
+shuff -n 1000 $ibed --random-source=$ibed > $tbed
+```
+The `--random-source` option guarantees that the same set of _random_ peaks is selected every time the command is executed and thus ensures the reproducibility of the analysis; indeed the [random selection is not as random as we could think](https://www.random.org/randomness/).
+
+To generate the plots we will use [deepTools](http://deeptools.readthedocs.io/en/latest/index.html), a suite of tools for exploring high-throughput sequencing data.
 
 First, we will use [computeMatrix](http://deeptools.readthedocs.io/en/latest/content/tools/computeMatrix.html) to generate a matrix in which:
 - each row is a region in (2)
@@ -81,24 +95,43 @@ First, we will use [computeMatrix](http://deeptools.readthedocs.io/en/latest/con
 The code:
 ```bash
 # output file (it is used later as input file!)
-omat=/users/project/4DGenome/bioinfo_course/session03/data/average_profiles_binsize10.mat
+omat=$ANALYSIS/data/average_profiles_binsize10.mat
 # see computeMatrix options for the other parameters
-/software/mb/el7.2/anaconda2/bin/computeMatrix reference-point -S $ibw1 $ibw2 -R $ibed -out $omat --referencePoint=center --binSize=10 --upstream=1000 --downstream=1000 --numberOfProcessors=10
+/software/mb/el7.2/anaconda2/bin/computeMatrix reference-point -S $ibw1 $ibw2 -R $tbed -out $omat --referencePoint=center --binSize=10 --upstream=1000 --downstream=1000 --numberOfProcessors=10
 ```
 
-Second, we plot:
+Second, we use [plotHeatmap](http://deeptools.readthedocs.io/en/latest/content/tools/plotHeatmap.html) to plot:
 - the resulting matrix as a heatmap (the higher the average number of normalized reads per bin per region, the more intense the color in the used scale)
-- an average profile that averages the values for all regions for each bin.
+- an average profile that averages the values in all regions for each bin.
 
 The code:
 ```bash
 # output file
-opdf=/users/project/4DGenome/bioinfo_course/session03/figures/average_profiles_binsize10.pdf
+opdf=$ANALYSIS/figures/average_profiles_binsize10.pdf
 /software/mb/el7.2/anaconda2/bin/plotHeatmap -m $omat -out $opdf --plotFileFormat pdf --heatmapHeight 10 --heatmapWidth 8 --xAxisLabel='' --startLabel='' --endLabel='' --colorMap=Blues --perGroup --refPointLabel='Peak' --regionsLabel T60-peaks --legendLocation=best --samplesLabel Untreated T60
 ```
 
 We remove the intermediate files:
 ```bash
-rm -f  /users/project/4DGenome/bioinfo_course/session03/tmp_gv_066_01_01_chipseq.bed
+rm -f $tbed
+```
+
+## Bonus: submitting a job to the cluster
+
+Above we run the code in a login node of the CRG cluster. As warned when entering the cluster, we are not supposed to run heavy computation in login nodes (as it would be the case for much larger set of regions or multiple ChIP-seq signal profiles). In such cases, you are encouraged to:
+- prepare a job script with the code to be run
+- submit the job to a computing node in the cluster
+
+As an example, this can be done with (`cat` prints it but does not execute it):
+```
+cat /users/project/4DGenome/bioinfo_course/session03/scripts/average_profiles.sh
+```
+A more user-friendly view of the [same script](https://github.com/4DGenome/bioinfo_course/blob/master/session03/scripts/average_profiles.sh).
+
+Edit the script in the 'variables' section to change things like the email to which notification about the job are sent, number of random regions, etc.
+
+And finally... execute it!
+```
+/users/project/4DGenome/bioinfo_course/session03/scripts/average_profiles.sh
 ```
 
