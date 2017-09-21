@@ -81,7 +81,7 @@ The computation time of the analysis notably scales up with the number of region
 ANALYSIS=$HOME/bioinfo_course/session03
 mkdir -p $ANALYSIS/{data,figures}
 tbed=$ANALYSIS/data/tmp_gv_066_01_01_chipseq.bed
-shuff -n 1000 $ibed --random-source=$ibed > $tbed
+shuf -n 1000 $ibed --random-source=$ibed > $tbed
 ```
 The `--random-source` option guarantees that the same set of _random_ peaks is selected every time the command is executed and thus ensures the reproducibility of the analysis; indeed the [random selection is not as random as we could think](https://www.random.org/randomness/).
 

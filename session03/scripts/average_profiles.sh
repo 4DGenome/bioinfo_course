@@ -46,7 +46,7 @@ plot_heatmap=`which plotHeatmap`
 queue=short-sl7
 memory=10G
 max_time=06:00:00
-slots=10
+slots=4
 
 
 
