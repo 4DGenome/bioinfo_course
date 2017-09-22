@@ -78,6 +78,9 @@ counts <- counts[(!is.na(av_genes_biotype) & av_genes_biotype=="protein_coding")
 ```
 
 # Exploratory analysis
+Exploratory analysis is first step in a real analysis. It provides a first sight of the data, and serves to detect biases in our data that potentially could modify the results of our analysis.
+
+In this case, we will start by defining group colors associated to each group, and then we will apply a reshape to our data, ir order to be compatible with ggplot package, tipically used to plot beatiful charts.
 
 ```R
 group_colors <- c("#e41a1c","#377eb8","#4daf4a")
@@ -101,6 +104,7 @@ p + geom_boxplot() + scale_y_log10()
 ```
 
 ## PCA
+PCA (Principal Component Analysis) provides a powerful but intuitive description of our samples. It is defined as an orthogonal rotation in order to match the main variability directions in our data, and how our original variables (genes) contribute to them.
 
 ```R
 mod <- prcomp(counts)
