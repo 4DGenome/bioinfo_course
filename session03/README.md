@@ -39,7 +39,7 @@ getwd()
 <br>
 
 # Load RNA-Seq data
-In order to start our practice we need to load the data in R. In particular, we will load the gene counts per sample, the metadata that describes the sample groups, and the gene biotype annotation, in order to work only with protein coding genes.
+In order to start our practice we need to load the data in R. In particular, we will load the gene counts per sample and the metadata that describes the sample groups. Also, the gene biotype annotation was loaded, in order to work only with protein coding genes.
 
 ```R
 
@@ -78,9 +78,9 @@ counts <- counts[(!is.na(av_genes_biotype) & av_genes_biotype=="protein_coding")
 ```
 
 # Exploratory analysis
-Exploratory analysis is first step in a real analysis. It provides a first sight of the data, and serves to detect biases in our data that potentially could modify the results of our analysis.
+Exploratory analysis is first step in a real analysis. It provides a first sight of the data, and serves to detect some biases that potentially could modify the results of our analysis.
 
-In this case, we will start by defining group colors associated to each group, and then we will apply a reshape to our data, ir order to be compatible with ggplot package, tipically used to plot beatiful charts.
+In this case, we will start by defining colors associated to each group, and then we will apply a reshape to our data, ir order to be compatible with [ggplot](http://ggplot2.tidyverse.org/index.html) package, tipically used to plot beatiful charts.
 
 ```R
 group_colors <- c("#e41a1c","#377eb8","#4daf4a")
