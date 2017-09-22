@@ -2,11 +2,11 @@
 
 This session focuses on how to perform some of the analyses using RNA-seq and ChIP-seq data that we are requested more often.
 1. Refresh how to access to the cluster and RStudio server
-- Load RNA-seq data into R
-- Exploratory analysis: boxplots and PCA
-- Differential expression analysis (DEA)
-- Interpretation of DEA results: volcano plots and venn diagrams
-- ChIP-seq signal over regions
+2. Load RNA-seq data into R
+3. Exploratory analysis: boxplots and PCA
+4. Differential expression analysis (DEA)
+5. Interpretation of DEA results: volcano plots and venn diagrams
+6. ChIP-seq signal over regions
 
 <br>
 
