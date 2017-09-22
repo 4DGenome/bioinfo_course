@@ -40,18 +40,23 @@ names(group_colors) <- unique(design$group)
 
 sample_colors <- group_colors[design$group]
 
-# boxplot
+# melt data for GGPLOT
 melt_counts <- melt(counts,varnames = c("gene","sample"))
-melt_counts$group <- design[melt_counts$sample,"group"]
+melt_counts$group <- design[match(melt_counts$sample,design$sample),"group"]
 
+# boxplot
 p <- ggplot(melt_counts, aes(x=sample, y=value, fill=group)) + theme(axis.text.x=element_text(angle=-45, hjust=0))
-p + geom_boxplot()
-p + geom_boxplot() + scale_y_log10()
+p + geom_boxplot(outlier.alpha = .1)
+p + geom_boxplot(outlier.alpha = .1) + scale_y_log10()
 
 # PCA
 mod <- prcomp(counts)
 explain_variance <- round((mod$sdev^2/sum(mod$sdev^2))*100,digits=2)
 
-plot(mod$rotation[,1], mod$rotation[,2], xlab=paste("PC1 (",explain_variance[1],"%)") , ylab=paste("PC2 (",explain_variance[2],")"), type="n")
+plot(mod$rotation[,1], mod$rotation[,2], xlab=paste("PC1 (",explain_variance[1],"%)") , ylab=paste("PC2 (",explain_variance[2],"%)"), type="n")
 text(mod$rotation[,1], mod$rotation[,2], labels=rownames(mod$rotation), col=sample_colors)
 legend("bottomleft",legend=names(group_colors),col=group_colors,lwd=2, cex=0.7)
+
+
+
+
