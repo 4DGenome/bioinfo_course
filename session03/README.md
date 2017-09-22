@@ -1,10 +1,12 @@
 # Overview
 
 This session focuses on how to perform some of the analyses using RNA-seq and ChIP-seq data that we are requested more often.
-- [Volcano plot](#volcano-plot)
-
-generate plots that we are very often asked for:
-- 
+1. Refresh how to access to the cluster and RStudio server
+- Load RNA-seq data into R
+- Exploratory analysis: boxplots and PCA
+- Differential expression analysis (DEA)
+- Interpretation of DEA results: volcano plots and venn diagrams
+- ChIP-seq signal over regions
 
 <br>
 
@@ -56,7 +58,7 @@ getwd()
 
 <br>
 
-# \*-seq signal over regions
+# ChIP-seq signal over regions
 
 Very often we want to know if a given protein is binding over a set of genomic regions. We can measure this by looking at the accumulation of sequencing reads of a ChIP-seq experiment targeting that protein over such regions. More generally, this analysis can be extended to other \*-seq experiments.
 
