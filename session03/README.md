@@ -38,7 +38,9 @@ getwd()
 
 <br>
 
-# Load data
+# Load RNA-Seq data
+In order to start our practice we need to load the data in R. In particular, we will load the gene counts per sample, the metadata that describes the sample groups, and the gene biotype annotation, in order to work only with protein coding genes.
+
 ```R
 
 library(ggplot2)
