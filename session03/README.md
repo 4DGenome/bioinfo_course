@@ -1,5 +1,11 @@
 # Overview
 
+This session focuses on how to perform some of the analyses using RNA-seq and ChIP-seq data that we are requested more often.
+- [Volcano plot](#volcano-plot)
+
+generate plots that we are very often asked for:
+- 
+
 <br>
 
 # Access to the cluster
@@ -36,7 +42,7 @@ getwd()
 
 ## Boxplots
 
-##  PCA
+## PCA
 
 # Differential expression
 
