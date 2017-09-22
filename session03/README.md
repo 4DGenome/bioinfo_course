@@ -117,13 +117,292 @@ legend("bottomleft",legend=names(group_colors),col=group_colors,lwd=2, cex=0.7)
 
 # Differential expression
 
+Usually, when are interested in comparing different conditions to see what genes
+change their expression. There are several ways to do so. Here we are going to
+use
+[DESeq2](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html),
+one of the most popular packages to perform RNAseq differential expression.
+
+As our experiment presents three conditions, we can define two different
+comparisons: one for each hormone (compared to untreated cells).
+
 ## P60 vs T0
+
+First we need to define a design `data.frame`. In this case, we can make use of
+the "metadata" already loaded and subset the relevant rows. Remember the meaning
+of the verbs `filter` and `mutate` explained in
+the
+[previous](https://github.com/4DGenome/bioinfo_course/tree/master/session02#basic-interaction-with) [session](https://github.com/4DGenome/bioinfo_course/tree/master/session02#transform-variables).
+
+```R
+design_t0_r6 <- filter(design, group %in% c("T47D R6", "T47D T0")) %>%
+    mutate(group = relevel(factor(group), "T47D T0"))
+           
+rownames(design_t0_r6) <- design_t0_r6$sample
+```
+Some tips to better understand the code:
+
+* `%in%` takes the left hand side vector and tells if each of its elements is
+  contained **in** the right hand side one.
+* `factor` is function to tell `R` that the variable should be treated as
+  categorical. This is important if we want to use the variable to define the
+  groups of the comparison.
+* `relevel` is a useful function that allows to define the *reference* group
+  of a factor. In this case, we want the untreated to be the reference.
+
+It is important that the design object is annotated with the row names matching
+the column names of the matrix of counts.
+
+Next thing we need is to up an *"container"* object with the requirements of the
+`DESeq2` package. The easiest way to do it is using the `DESeqDataSetFromMatrix` function, that takes
+three arguments:
+
+```R
+dds_t0_r6 <- DESeqDataSetFromMatrix(countData = counts[,design_t0_r6$sample],
+                                    colData = design_t0_r6,
+                                    design = ~ group)
+
+dds_t0_r6 <- DESeq(dds_t0_r6)
+```
+* matrix of counts
+* design `data.frame`
+* factor defining the comparison (of the design `data.frame`). The `~` symbol is
+  required to let `R` know that we are specifying a comparison model.
+
+> Do you know what is doing the `[,]` operator?
+>
+> It allows us to subset the `[rows, columns]` of a matrix. It takes a vector of
+> indexes as arguments (the sample IDs in this case). Whenever one of the `rows`
+> or `columns` index vector is empty, it returns all of its elements.
+
+And then feed the `DESeq` function with it (where all the magic happens). The
+result is a quite complicated object with a lot of information about the
+comparison process. However we can extract the relevant information using the
+`results` function. I'm pretty sure you can guess what the rest of this code
+chuck does (basically, coerce the output to a `data.frame` and create a new
+column from the row names).
+
+```R
+res_t0_r6 <- results(dds_t0_r6) %>%
+    as.data.frame
+res_t0_r6$gene <- rownames(res_t0_r6)
+```
+
+Nice, we have the results. Do you want to have a look?
+
+```R
+head(res_t0_r6)
+```
+
+* **baseMean** is the average of the expression for **all** samples
+  (irrespective of their treatment).
+* **log2FoldChange** well, it's the log2 Fold Change between the treated and the
+  untreated samples.
+* **lfcSE** is the standard error of the log2 Fold Change.
+* **stat** is the statistical score used in the test (a moderated t-statistic).
+* **pvalue** is the raw p-value obtained from the comparison.
+* **padj** is the adjusted p-value. We need to modify the raw p-value in order
+  to avoid a big false positive rate due to multiple comparisons (we are
+  performing as many tests as genes in the data set!)
+*  **gene** is the gen ID
+
+In most experiments there is a set of genes that present expression levels so
+low that cannot be reliably quantified. Those present a `NA` in the `padj`
+column. It could be use full to filter them out.
+
+```R
+res_t0_e6 <- filter(res_t0_e6, !is.na(padj))
+```
+Once we have the numerical results, let's simplify to make them more
+understandable. We can use the same approach as in
+the
+[last session](https://github.com/4DGenome/bioinfo_course/tree/master/session02#transform-variables) to
+decide what genes present biological and statistical differences between conditions.
+
+```R
+res_t0_e6 <- mutate(res_t0_e6,
+                    direction = ifelse(log2FoldChange > 0, "up", "down"),
+                    stat_diff = ifelse(padj < .01, "signf", "no-sig"),
+                    bio_diff = ifelse(abs(log2FoldChange) > 1, "relevant", "irrelevant"),
+                    diff_group = paste(stat_diff, bio_diff),
+                    change = ifelse((stat_diff == "signf") & (bio_diff == "relevant"),
+                                    "change", "no change"))
+```
+
+Remember that one can `group_by` some variables and `summarize` the result. For
+instance, counting the number of differentially expressed genes on each
+"direction". Or we can store a vector with the gene IDs of the genes going up or down.
+
+```R
+group_by(res_t0_e6, change, direction) %>%
+    summarize(n = n())
+
+genes_t0_r6_up <- filter(res_t0_r6, change == "change", direction == "up")$gene
+genes_t0_r6_down <- filter(res_t0_r6, change == "change", direction == "down")$gene
+```
 
 ## E60 vs T0
 
+Once we have performed one differential analysis, we can repeat it for the other
+hormone. We just need to change the subseting of both the design `data.frame`
+and the matrix of counts.
+
+```R
+design_t0_e6 <- filter(design, group %in% c("T47D E6", "T47D T0")) %>%
+    mutate(group = relevel(factor(group), "T47D T0"))
+           
+rownames(design_t0_e6) <- design_t0_e6$sample
+```
+The rest is exactly the same (bu for the object names, because we don't want to lose all the
+previous analysis).
+
+```R
+dds_t0_e6 <- DESeqDataSetFromMatrix(countData = counts[,design_t0_e6$sample],
+                                    colData = design_t0_e6,
+                                    design = ~ group)
+
+dds_t0_e6 <- DESeq(dds_t0_e6)
+
+res_t0_e6 <- results(dds_t0_e6) %>%
+    as.data.frame
+res_t0_e6$gene <- rownames(res_t0_e6)
+
+res_t0_e6 <- filter(res_t0_e6, !is.na(padj))
+
+res_t0_e6 <- mutate(res_t0_e6,
+                    direction = ifelse(log2FoldChange > 0, "up", "down"),
+                    stat_diff = ifelse(padj < .01, "signf", "no-sig"),
+                    bio_diff = ifelse(abs(log2FoldChange) > 1, "relevant", "irrelevant"),
+                    diff_group = paste(stat_diff, bio_diff),
+                    change = ifelse((stat_diff == "signf") & (bio_diff == "relevant"),
+                                    "change", "no change"))
+```
+
+How many genes are changing upon estradiol treatment?
+
+```R
+group_by(res_t0_e6, change, direction) %>%
+    summarize(n = n())
+
+genes_t0_e6_up <- filter(res_t0_e6, change == "change", direction == "up")$gene
+genes_t0_e6_down <- filter(res_t0_e6, change == "change", direction == "down")$gene
+```
+
 # Volcano plot
 
+A common way to visually summarize a differential expression experiment is via
+a volcano plot. It depicts both "dimensions" of the differences: the **magnitude**
+of the change (encoded in the Fold Change on the X axis) and its **variability** (encoded in
+the p-value on the Y axis). Each point represents one gene.
+
+We can make one of such plots with the following code:
+
+```R
+ggplot(res_t0_r6,
+       aes(x = log2FoldChange,
+           y = -log10(padj))) +
+    geom_point(alpha = .1) +
+    geom_hline(yintercept = -log10(.01), col = 2, lty = 2) +
+    geom_vline(xintercept = c(-1, 1), col = 2, lty = 2) +
+    coord_cartesian(ylim = c(0, 50))
+```
+
+where the `ggplot` function initializes the plot taking the `data.frame` of the
+results and the definition of the variables we want on each axis and then the
+`geom_*` functions draw things in the plot area. We have included some
+transparency (`alpha`) for the points to get a feeling of the density of the
+genes. `_vline` and `_hline` draws vertical and horizontal lines marking the
+thresholds selected.
+
+The plot for the other treatment is equivalent:
+
+```R
+ggplot(res_t0_e6,
+       aes(x = log2FoldChange,
+           y = -log10(padj))) +
+    geom_point(alpha = .1) +
+    geom_hline(yintercept = -log10(.01), col = 2, lty = 2) +
+    geom_vline(xintercept = c(-1, 1), col = 2, lty = 2) +
+    coord_cartesian(ylim = c(0, 50))
+```
+
+> BONUS: Can we put both plots in the same figure, with the same scale?
+
+Sure! But we need some preliminary work to prepare a `data.frame` with the
+relevant info (including a new variable `comparison` that labels the
+comparison). Please take note of the faceting obtained with the `facet_wrap`
+function.
+
+
+```R
+aux_res_t0_r6 <- mutate(res_t0_r6,
+                        comparison = "P6 vs T0") %>%
+    dplyr::select(gene, log2FoldChange, padj, comparison)
+
+aux_res_t0_e6 <- mutate(res_t0_e6,
+                        comparison = "E6 vs T0") %>%
+    dplyr::select(gene, log2FoldChange, padj, comparison)
+
+aux_res <- rbind(aux_res_t0_r6, aux_res_t0_e6)
+
+ggplot(aux_res,
+       aes(x = log2FoldChange,
+           y = -log10(padj))) +
+        geom_point(alpha = .1) +
+    geom_hline(yintercept = -log10(.01), col = 2, lty = 2) +
+    geom_vline(xintercept = c(-1, 1), col = 2, lty = 2) +
+    coord_cartesian(ylim = c(0, 50)) +
+    facet_wrap(~ comparison, ncol = 1)
+
+```
+
+
 # Venn diagrams
+
+Volcano plots are fine, but sometimes we want something simpler that summarizes
+other aspects of the analysis. If we are interested in what genes are regulated
+by both hormones, we can draw a Venn diagram.
+
+There are several packages to do that. Here we are using one of them
+(`VennDiagram`), but there are many others.
+
+First we have to define a object via the `venn.diagram` function. The most
+important arguments are the first one (one list with genes up regulated in each
+condition) and the second one, that have to be set to `NULL` if we want to
+display the result in the screen. The rest of the arguments define some
+graphical properties of the plot. You can have a look at all of them in the
+help page `?venn.diagram`.
+
+```R
+venn_up <- venn.diagram(list(R6 = genes_t0_r6_up,
+                             E6 = genes_t0_e6_up),
+                          NULL,
+                          fill = c("blue", "red"),
+                          alpha = c(0.5,0.5),
+                          cex = 2,
+                          main = "Upregualted genes after hormone",
+                          main.cex = 2)
+
+grid.newpage()
+grid.draw(venn_up)
+```
+After defining the object, the last two lines draw it in a new grid (i.e. window).
+
+Of course the same can be done for the down regulated genes.
+
+```R
+venn_down <- venn.diagram(list(R6 = genes_t0_r6_down,
+                               E6 = genes_t0_e6_down),
+                          NULL,
+                          fill = c("blue", "red"),
+                          alpha = c(0.5,0.5),
+                          cex = 2,
+                          main = "Downregualted genes after hormone",
+                          main.cex = 2)
+
+grid.newpage()
+grid.draw(venn_down)
+```
 
 <br>
 

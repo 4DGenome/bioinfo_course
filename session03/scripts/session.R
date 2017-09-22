@@ -79,6 +79,8 @@ res_t0_r6 <- results(dds_t0_r6) %>%
     as.data.frame
 res_t0_r6$gene <- rownames(res_t0_r6)
 
+head(res_t0_r6)
+
 res_t0_r6 <- filter(res_t0_r6, !is.na(padj))
 
 res_t0_r6 <- mutate(res_t0_r6,
