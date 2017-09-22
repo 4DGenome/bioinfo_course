@@ -90,6 +90,7 @@ melt_counts$group <- design[melt_counts$sample,"group"]
 ```
 
 ## Boxplots
+Boxplots can summarize in a very simple way the range of the samples from our study. In particular, the main quartiles of sample distributions, as well as outliers, are displayed, 
 
 ```R
 p <- ggplot(melt_counts, aes(x=sample, y=value, fill=group)) + theme(axis.text.x=element_text(angle=-45, hjust=0))
