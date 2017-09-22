@@ -104,7 +104,7 @@ p + geom_boxplot() + scale_y_log10()
 ```
 
 ## PCA
-PCA (Principal Component Analysis) provides a powerful but intuitive description of our samples. It is defined as an orthogonal rotation in order to match the main variability directions in our data, and how our original variables (genes) contribute to them.
+PCA (Principal Component Analysis) provides a powerful but intuitive description of our samples. It is defined as an orthogonal rotation in order to match the main variability directions in our data, and how our original variables (genes) contribute to them. In a general case, we will expect a good separation between our groups in the space defined by the first and second principal components, otherwise, higher sources of variability could be present in our data
 
 ```R
 mod <- prcomp(counts)
