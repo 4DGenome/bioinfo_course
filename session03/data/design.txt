@@ -1,0 +1,9 @@
+fd_004_01_01_rnaseq	T47D T0
+fd_004_02_01_rnaseq	T47D T0
+fd_004_03_01_rnaseq	T47D T0
+fd_005_01_01_rnaseq	T47D R6
+fd_005_02_01_rnaseq	T47D R6
+fd_005_03_01_rnaseq	T47D E6
+fd_006_01_01_rnaseq	T47D E6
+fd_006_02_01_rnaseq	T47D E6
+fd_006_03_01_rnaseq	T47D R6
