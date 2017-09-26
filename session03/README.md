@@ -77,6 +77,8 @@ table(is.na(av_genes_biotype))
 counts <- counts[(!is.na(av_genes_biotype) & av_genes_biotype=="protein_coding"),]
 ```
 
+<br>
+
 # Exploratory analysis
 Exploratory analysis is first step in a real analysis. It provides a first sight of the data, and serves to detect some biases that potentially could modify the results of our analysis.
 
@@ -114,6 +116,8 @@ plot(mod$rotation[,1], mod$rotation[,2], xlab=paste("PC1 (",explain_variance[1],
 text(mod$rotation[,1], mod$rotation[,2], labels=rownames(mod$rotation), col=sample_colors)
 legend("bottomleft",legend=names(group_colors),col=group_colors,lwd=2, cex=0.7)
 ```
+
+<br>
 
 # Differential expression
 
@@ -288,6 +292,8 @@ genes_t0_e6_up <- filter(res_t0_e6, change == "change", direction == "up")$gene
 genes_t0_e6_down <- filter(res_t0_e6, change == "change", direction == "down")$gene
 ```
 
+<br>
+
 # Volcano plot
 
 A common way to visually summarize a differential expression experiment is via
@@ -356,6 +362,7 @@ ggplot(aux_res,
 
 ```
 
+<br>
 
 # Venn diagrams
 
