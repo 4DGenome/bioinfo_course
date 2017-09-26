@@ -139,6 +139,10 @@ the
 [previous](https://github.com/4DGenome/bioinfo_course/tree/master/session02#basic-interaction-with) [session](https://github.com/4DGenome/bioinfo_course/tree/master/session02#transform-variables).
 
 ```R
+# import required R packages
+library("tidyverse")
+options(stringsAsFactors = F)
+
 design_t0_r6 <- filter(design, group %in% c("T47D R6", "T47D T0")) %>%
     mutate(group = relevel(factor(group), "T47D T0"))
            
