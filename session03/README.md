@@ -42,6 +42,7 @@ getwd()
 In order to start our practice we need to load the data in R. In particular, we will load the gene counts per sample and the metadata that describes the sample groups. Also, the gene biotype annotation was loaded, in order to work only with protein coding genes.
 
 ```R
+.libPaths("/software/R/packages-el7.2")
 
 library(ggplot2)
 library(reshape2)
